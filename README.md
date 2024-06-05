@@ -24,7 +24,7 @@
 - PEERTUBE_SECRET
   - Secreto aleatorio creado con `openssl rand -hex 32`
 
-3. Correr el siguiente script en una `shell` `bash` o similar para popular las variables del archivo [`production.placeholder.yaml`](production.placeholder.yaml) y transformarlo en el archivo `production.yaml` que es el archivo de configuración de `Peertube`.
+3. Correr el siguiente script en una `shell` `bash` o similar para popular las variables del archivo [`production.placeholder.yaml`](production.placeholder.yaml) y transformarlo en el archivo `production.yaml` que es el archivo de configuración de `Peertube`. El archivo tiene activada redundancia de videos eentre instancias sincronizadas por default.
 
 ```sh
 set -a
@@ -38,6 +38,8 @@ set +a
 5. Ejecutar `docker compose up -d` para ejecutar los servicios necesarios para el servidor de `Peertube` con la configuración necesaria.
 
 6. Ejecutar `docker compose exec -u peertube peertube npm run reset-password -- -u root` para modificar la contraseña del usuario `root` en la nueva instancia. Una vez hecho esto puede conectarse al dominio configurado anteriormente y comenzar a utilizarla.
+
+7. Para configurar la sincronización entre instancias, una vez iniciado sesión con el usuario `root` y la contraseña definida anteriormente, se puede acceder en la interfaz de usuario a `Administration > Federation > Following > Follow` e ingresar el dominio de la otra instancia con el formato `peertube@DOMAIN`para seguirla y que sus videos aparezcan en la nuestra.
 
 ## Detalles
 
@@ -229,3 +231,5 @@ De esta forma, para deployear simplemente se debe correr `docker compose up -d` 
 En caso de utilizar `podman` en lugar de `docker` también se provee un archivo [`podman-compose.yml`](podman-compose.yml) con las modificaciónes necesarias para utilizar este runtime de contenedores. Se pueden deployear todos los recursos utilizando el comando `podman compose -f podman-compose.yml up -d
 
 Una vez peertube esté corriendo en los logs se puede observar la contraseña del usuario administrador o la misma se puede cambiar utilizando el comando `docker compose exec -u peertube peertube npm run reset-password -- -u root`
+
+Para configurar la sincronización entre instancias, una vez iniciado sesión con el usuario `root` y la contraseña definida anteriormente, se puede acceder en la interfaz de usuario a `Administration > Federation > Following > Follow` e ingresar el dominio de la otra instancia con el formato `peertube@DOMAIN`para seguirla y que sus videos aparezcan en la nuestra. Como la redundancia de videos está habilitada, automáticamente se sincronizarán los videos de las instancias para distribuir la carga entre los servidores cuándo se esté mirando un video.
