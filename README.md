@@ -2,17 +2,53 @@
 
 ## Requerimientos
 
-- Docker o Podman para deployear contenedores
+- [Docker](https://docs.docker.com/engine/install/) o [Podman](https://podman.io/docs/installation) para deployear contenedores
 - Red con posibilidad de hostear públicamente (en su defecto, se puede utilizar alguna nube)
 
-## Compose
+## Quickstart
+
+1. Clonar el repositorio con el comando `git clone https://github.com/msambartolomeo/redes-peertube.git`
+
+2. Completar el archivo [`.env`](.env) con las siguientes variables:
+
+- POSTGRES_USER
+  - Usuario de postgres
+- POSTGRES_PASSWORD
+  - Usuario de postgres
+- POSTGRES_DB
+  - Base de datos de postgres
+- PEERTUBE_DOMAIN
+  - Dominio apuntando a la ip del servidor (puede conseguirse uno gratuito en [duckdns.org](https://duckdns.org))
+- PEERTUBE_ADMIN_EMAIL
+  - Email del usuario que será administrador
+- PEERTUBE_SECRET
+  - Secreto aleatorio creado con `openssl rand -hex 32`
+
+3. Correr el siguiente script en una `shell` `bash` o similar para popular las variables del archivo [`production.placeholder.yaml`](production.placeholder.yaml) y transformarlo en el archivo `production.yaml` que es el archivo de configuración de `Peertube`.
+
+```sh
+set -a
+source .env
+envsubst < production.placeholder.yaml > production.yaml
+set +a
+```
+
+4. Asegurarse que los puertos 80 y 443 estén abiertos con `port forwarding` en el router y apuntando a la ip privada de la PC que vaya a ejecutar el servidor. También asegurarse de que el firewall de la misma PC no esté bloqueando los pedidos en esos puertos.
+
+5. Ejecutar `docker compose up -d` para ejecutar los servicios necesarios para el servidor de `Peertube` con la configuración necesaria.
+
+6. Ejecutar `docker compose exec -u peertube peertube npm run reset-password -- -u root` para modificar la contraseña del usuario `root` en la nueva instancia. Una vez hecho esto puede conectarse al dominio configurado anteriormente y comenzar a utilizarla.
+
+## Detalles
+
+### Compose
 
 Para levantar los servicios necesarios de forma simple y eficiente se utilizarán contenedores.
 Peertube provee un archivo `docker-compose.yml` oficial para levantar la instancia el cuál puede encontrarse en https://github.com/Chocobozzz/PeerTube/blob/master/support/docker/production/docker-compose.yml, pero el mismo no podía utilizarse directamente ya que tiene limitaciónes sobre la configuración de reduncancia de instancias. Por esta razón se aprovechó para crear un archivo compose nuevo basado en el mismo para saltearnos estas limitaciónes.
 
 A continuación se detallan los servicios levantados y en el anexo se encontrará el archivo completo para su utilización.
 
-### Peertube
+#### Peertube
 
 ```yml
 peertube:
@@ -43,7 +79,7 @@ En el caso de la network, peertube tiene la particularidad de que no reaccióna 
 
 Por último, el servicio de peertube depende de dos bases de datos que utilizará para guardar información, una base de datos relacional `postgresql` y una base de datos para cache `redis`. Marcamos que el servicio depende de las mismas para evitar que peertube arranque antes que las bases de datos y produzca errores.
 
-### Postgres
+#### Postgres
 
 ```yml
 postgres:
@@ -64,7 +100,7 @@ postgres:
 
 Postgres es la base de datos relacional que necesita el servicio de peertube para guardar información. En este caso le pasamos las variables de entorno para definir la base de datos, configuramos un volúmen para persistir la data y le agregamos un healthcheck para que peertube sepa cuando la misma está habilitada y lista para funcionar, y evitar errores de sincronización.
 
-### Redis
+#### Redis
 
 ```yml
 redis:
@@ -81,7 +117,7 @@ redis:
 
 Redis es una base de datos clave valor, normalmente utilizada como cache, y para persistir información en memoria. Igual que postgres, le configuramos un healthcheck y montamos los volumenes necesarios para persistir la data de la misma.
 
-### Caddy
+#### Caddy
 
 ```yml
 caddy:
@@ -106,7 +142,7 @@ Caddy es un reverse proxy similar a nginx, pero más simple de configurar y a su
 
 Es importante persistir la data de los certificados en un volumen e informarle a docker que abra los puertos 80 y 443 de este contenedor; 433 para proveer la salida https, y 80 para permitirle al mismo resolver los desafíos que le presenta `Let's Encrypt` para poder negociar el certificado ssl gratuito.
 
-### Redes
+#### Redes
 
 ```yml
 networks:
@@ -119,7 +155,7 @@ networks:
 
 Es importante aclarar que de la misma forma que a peertube tuvimos que especificarle una ip fija, debemos especificar la subnet para que docker utilice para sus interfaces internas, de forma que la misma funcione. Naturalmente, la ip fija definida en el servicio de peertube debe ser parte de esta subnet.
 
-### Postfix
+#### Postfix
 
 ```yml
 postfix:
@@ -133,7 +169,7 @@ postfix:
 
 El archivo compose oficial contiene también configuración para un servicio de mails necesario para la operación del servicio real. El mismo no es necesario para la prueba de concepto realizada y además no poseemos un dominio propio como para poder utilizarlo adecuadamente, por lo que se decidió no incluirlo en el archivo compose final. Se presenta aquí por completitud pero se obviará su configuración más adelante.
 
-## Configuración
+### Configuración
 
 Como se mencionó antes la configuración del servidor de peertube se realizará mediante el archivo de configuración completo `production.yml` en lugar de utilizar las variables de entorno provistas por la imagen oficial. La configuración de ejemplo puede obtenerse en https://github.com/Chocobozzz/PeerTube/blob/master/config/production.yaml.example.
 
@@ -178,7 +214,7 @@ envsubst < production.placeholder.yaml > production.yaml
 set +a
 ```
 
-## Deploy
+### Deploy
 
 Una vez realizada la configuración se puede proseguir con el deploy del servicio. El mismo puede ser realizado de manera local o en la nube. En caso de hacerlo local se deben realizar port forwarding a los puertos 80 y 443 del router hacia la pc que corra el servidor de forma que otros puedan conectarse. Si el servidor está corriendo algún tipo de firewall para estos puertos el mismo puede deshabilitarse. Esto puede hacerse con los comandos `firewall-cmd --add-port=443/tcp` y `firewall-cmd --add-port=80/tcp`. Si el contenedor se corre sin permisos de root (en el caso de que no se utilice docker, y se use podman por ejemplo) se debe permitir a los usuarios no root realizar bind a los puertos privilegiados con el comando `sysctl net.ipv4.ip_unprivileged_port_start=80`
 
