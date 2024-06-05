@@ -5,7 +5,7 @@
 - [Docker](https://docs.docker.com/engine/install/) o [Podman](https://podman.io/docs/installation), junto a [docker-compose](https://docs.docker.com/compose/install/) para deployear contenedores
 - Red con posibilidad de hostear públicamente (en su defecto, se puede utilizar alguna nube)
 
-## Quickstart
+## Quick start
 
 1. Clonar el repositorio con el comando `git clone https://github.com/msambartolomeo/redes-peertube.git`
 
@@ -24,7 +24,7 @@
 - PEERTUBE_SECRET
   - Secreto aleatorio creado con `openssl rand -hex 32`
 
-3. Correr el siguiente script en una `shell` `bash` o similar para popular las variables del archivo [`production.placeholder.yaml`](production.placeholder.yaml) y transformarlo en el archivo `production.yaml` que es el archivo de configuración de `Peertube`. El archivo tiene activada redundancia de videos eentre instancias sincronizadas por default.
+3. Correr el siguiente script en una `shell` `bash` o similar para popular las variables del archivo [`production.placeholder.yaml`](production.placeholder.yaml) y transformarlo en el archivo `production.yaml` que es el archivo de configuración de `Peertube`. El archivo tiene activada redundancia de videos entre instancias sincronizadas por default.
 
 ```sh
 set -a
@@ -46,7 +46,7 @@ set +a
 ### Compose
 
 Para levantar los servicios necesarios de forma simple y eficiente se utilizarán contenedores.
-Peertube provee un archivo `docker-compose.yml` oficial para levantar la instancia el cuál puede encontrarse en https://github.com/Chocobozzz/PeerTube/blob/master/support/docker/production/docker-compose.yml, pero el mismo no podía utilizarse directamente ya que tiene limitaciónes sobre la configuración de reduncancia de instancias. Por esta razón se aprovechó para crear un archivo compose nuevo basado en el mismo para saltearnos estas limitaciónes.
+Peertube provee un archivo `docker-compose.yml` oficial para levantar la instancia el cuál puede encontrarse en https://github.com/Chocobozzz/PeerTube/blob/master/support/docker/production/docker-compose.yml, pero el mismo no podía utilizarse directamente ya que tiene limitaciones sobre la configuración de redundancia de instancias. Por esta razón se aprovechó para crear un archivo compose nuevo basado en el mismo para saltarnos estas limitaciones.
 
 A continuación se detallan los servicios levantados y en el anexo se encontrará el archivo completo para su utilización.
 
@@ -73,11 +73,11 @@ peertube:
   restart: unless-stopped
 ```
 
-Es el servicio que levanta la aplicación principal, utilizando la imagen oficial de peertube para deployear en producción. Siguiendo la documentación de la misma, esta se configura por variables de entorno, como suele hacerse normalmente con contenedores. Desafortunadamente, la imagen no provee una forma de realizar la configuración de redundancia mediante las mismas, por lo que optamos por agregar la configuración completa con modificaciónes nuestras como un volumen más. Este es el archivo production.yaml montado. Sobre la configuración de este archivo hablaremos más adelante.
+Es el servicio que levanta la aplicación principal, utilizando la imagen oficial de peertube para deployear en producción. Siguiendo la documentación de la misma, esta se configura por variables de entorno, como suele hacerse normalmente con contenedores. Desafortunadamente, la imagen no provee una forma de realizar la configuración de redundancia mediante las mismas, por lo que optamos por agregar la configuración completa con modificaciones nuestras como un volumen más. Este es el archivo production.yaml montado. Sobre la configuración de este archivo hablaremos más adelante.
 
-Además de este archivo, también se montan volumenes para la data y la configuración, de forma de poder persistirlas entre reinicios de la aplicación.
+Además de este archivo, también se montan volúmenes para la data y la configuración, de forma de poder persistirlas entre reinicios de la aplicación.
 
-En el caso de la network, peertube tiene la particularidad de que no reaccióna agradablemente a los cambios de ip entre reinicios, por lo que la configuramos para que tenga una ip fija en la red virtual de docker creada.
+En el caso de la network, peertube tiene la particularidad de que no reacciona agradablemente a los cambios de ip entre reinicios, por lo que la configuramos para que tenga una ip fija en la red virtual de docker creada.
 
 Por último, el servicio de peertube depende de dos bases de datos que utilizará para guardar información, una base de datos relacional `postgresql` y una base de datos para cache `redis`. Marcamos que el servicio depende de las mismas para evitar que peertube arranque antes que las bases de datos y produzca errores.
 
@@ -100,7 +100,7 @@ postgres:
   restart: unless-stopped
 ```
 
-Postgres es la base de datos relacional que necesita el servicio de peertube para guardar información. En este caso le pasamos las variables de entorno para definir la base de datos, configuramos un volúmen para persistir la data y le agregamos un healthcheck para que peertube sepa cuando la misma está habilitada y lista para funcionar, y evitar errores de sincronización.
+Postgres es la base de datos relacional que necesita el servicio de peertube para guardar información. En este caso le pasamos las variables de entorno para definir la base de datos, configuramos un volumen para persistir la data y le agregamos un healthcheck para que peertube sepa cuando la misma está habilitada y lista para funcionar, y evitar errores de sincronización.
 
 #### Redis
 
@@ -117,7 +117,7 @@ redis:
   restart: unless-stopped
 ```
 
-Redis es una base de datos clave valor, normalmente utilizada como cache, y para persistir información en memoria. Igual que postgres, le configuramos un healthcheck y montamos los volumenes necesarios para persistir la data de la misma.
+Redis es una base de datos clave valor, normalmente utilizada como cache, y para persistir información en memoria. Igual que postgres, le configuramos un healthcheck y montamos los volúmenes necesarios para persistir la data de la misma.
 
 #### Caddy
 
@@ -140,7 +140,7 @@ caddy:
       condition: service_started
 ```
 
-Caddy es un reverse proxy similar a nginx, pero más simple de configurar y a su vez contiene la lógica de negociación de certificados con la plataforma `Let's Encrypt` ya incluída. De esta forma simplemente con utilizar esta imagen, y especificar el comando para que cree un proxy reverso desde el servicio que peertube abre en el puerto 9000 de la red interna de docker hacia un dominio especificado por nosotros, podemos lograr que la aplicación nos provea https para poder utilizarla mediante internet con seguridad.
+Caddy es un reverse proxy similar a nginx, pero más simple de configurar y a su vez contiene la lógica de negociación de certificados con la plataforma `Let's Encrypt` ya incluida. De esta forma simplemente con utilizar esta imagen, y especificar el comando para que cree un proxy reverso desde el servicio que peertube abre en el puerto 9000 de la red interna de docker hacia un dominio especificado por nosotros, podemos lograr que la aplicación nos provea https para poder utilizarla mediante internet con seguridad.
 
 Es importante persistir la data de los certificados en un volumen e informarle a docker que abra los puertos 80 y 443 de este contenedor; 433 para proveer la salida https, y 80 para permitirle al mismo resolver los desafíos que le presenta `Let's Encrypt` para poder negociar el certificado ssl gratuito.
 
@@ -175,22 +175,22 @@ El archivo compose oficial contiene también configuración para un servicio de 
 
 Como se mencionó antes la configuración del servidor de peertube se realizará mediante el archivo de configuración completo `production.yml` en lugar de utilizar las variables de entorno provistas por la imagen oficial. La configuración de ejemplo puede obtenerse en https://github.com/Chocobozzz/PeerTube/blob/master/config/production.yaml.example.
 
-De todas formas, esta configuración está diseñada para cuándo el servicio no está corriendo en docker, por lo que se le deben hacer algunas modificaciónes:
+De todas formas, esta configuración está diseñada para cuándo el servicio no está corriendo en docker, por lo que se le deben hacer algunas modificaciones:
 
 - En `listen`, debe configurarse para que escuche en `0.0.0.0`, es decir en cualquier ip.
 - Deben modificarse los hostnames de `database` y de `redis` a que sean `postgres` y `redis` respectivamente en lugar de `127.0.0.1` para que puedan detectarse en la red interna de docker.
 - En `database`, debe modificarse la clave suffix por una que diga name
-- En `storage`, deben modifiarse todos los paths a que comiencen con `/data/` en lugar de `/var/www/peertube/storage/`
+- En `storage`, deben modificarse todos los paths a que comiencen con `/data/` en lugar de `/var/www/peertube/storage/`
 
 A partir de estos cambios estructurales, se deben hacer las configuraciones pertinentes a la instancia:
 
-- En `webserver`, configurar el hostname con un dominio asociado a la ip publica en donde correra el servidor.
+- En `webserver`, configurar el hostname con un dominio asociado a la ip publica en donde correrá el servidor.
 - En `secrets`, escribir un secreto creado con el comando `openssl rand -hex 32`
 - En `database`, configurar `name`, `username` y `password` con los valores a utilizar para la base de datos postgres
 - En `admin`, configurar el email del usuario que luego será root en la instancia
 - En `redundancy`, descomentar la estrategia de redundancy entre servidores a utilizar,
 
-Como hacer todos estos cambios consume tiempo, se provee una version del archivo [`production.placeholder.yaml`](production.placeholder.yaml) ya configurada pero con valores placeholder para los campos configurables. En el archivo ya provisto, se optó por utilizar todas las estategias de redundancia entre instancias posibles, pero esto se podría modificar a mano si deseara.
+Como hacer todos estos cambios consume tiempo, se provee una version del archivo [`production.placeholder.yaml`](production.placeholder.yaml) ya configurada pero con valores placeholder para los campos configurables. En el archivo ya provisto, se optó por utilizar todas las estrategias de redundancia entre instancias posibles, pero esto se podría modificar a mano si deseara.
 
 Para conseguir el archivo final `production.yaml`, se provee un archivo [`.env`](.env) que solamente incluya la configuración a estos valores. Los elementos a configurar este archivo son los siguientes:
 
@@ -228,7 +228,7 @@ Como se mencionó antes, ya se provee el archivo [`docker-compose.yml`](docker-c
 
 De esta forma, para deployear simplemente se debe correr `docker compose up -d` y todos los recursos necesarios serán creados.
 
-En caso de utilizar `podman` en lugar de `docker` también se provee un archivo [`podman-compose.yml`](podman-compose.yml) con las modificaciónes necesarias para utilizar este runtime de contenedores. Se pueden deployear todos los recursos utilizando el comando `podman compose -f podman-compose.yml up -d
+En caso de utilizar `podman` en lugar de `docker` también se provee un archivo [`podman-compose.yml`](podman-compose.yml) con las modificaciones necesarias para utilizar este runtime de contenedores. Se pueden deployear todos los recursos utilizando el comando `podman compose -f podman-compose.yml up -d
 
 Una vez peertube esté corriendo en los logs se puede observar la contraseña del usuario administrador o la misma se puede cambiar utilizando el comando `docker compose exec -u peertube peertube npm run reset-password -- -u root`
 
