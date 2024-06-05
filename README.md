@@ -2,7 +2,7 @@
 
 ## Requerimientos
 
-- [Docker](https://docs.docker.com/engine/install/) o [Podman](https://podman.io/docs/installation) para deployear contenedores
+- [Docker](https://docs.docker.com/engine/install/) o [Podman](https://podman.io/docs/installation), junto a [docker-compose](https://docs.docker.com/compose/install/) para deployear contenedores
 - Red con posibilidad de hostear públicamente (en su defecto, se puede utilizar alguna nube)
 
 ## Quickstart
@@ -167,16 +167,16 @@ postfix:
   restart: "always"
 ```
 
-El archivo compose oficial contiene también configuración para un servicio de mails necesario para la operación del servicio real. El mismo no es necesario para la prueba de concepto realizada y además no poseemos un dominio propio como para poder utilizarlo adecuadamente, por lo que se decidió no incluirlo en el archivo compose final. Se presenta aquí por completitud pero se obviará su configuración más adelante.
+El archivo compose oficial contiene también configuración para un servicio de mails necesario para la operación del servicio real. El mismo no es necesario para la prueba de concepto realizada y además no poseemos un dominio propio en el cuál se pueda configurar email como para poder utilizarlo adecuadamente, por lo que se decidió no incluirlo en el archivo compose final. Se presenta aquí por completitud pero se obviará su configuración más adelante.
 
 ### Configuración
 
 Como se mencionó antes la configuración del servidor de peertube se realizará mediante el archivo de configuración completo `production.yml` en lugar de utilizar las variables de entorno provistas por la imagen oficial. La configuración de ejemplo puede obtenerse en https://github.com/Chocobozzz/PeerTube/blob/master/config/production.yaml.example.
 
-De todas formas, esta configuración está diseñada para cuándo el corredor no está corriendo en docker, por lo que se le deben hacer algunas modificaciónes:
+De todas formas, esta configuración está diseñada para cuándo el servicio no está corriendo en docker, por lo que se le deben hacer algunas modificaciónes:
 
 - En `listen`, debe configurarse para que escuche en `0.0.0.0`, es decir en cualquier ip.
-- Deben modificarse los hostnames de `database` y de `redis` a que sean `postgres` y `redis` respectivamente en lugar de `127.0.0.1` para que puedan detectarse en la red de docker.
+- Deben modificarse los hostnames de `database` y de `redis` a que sean `postgres` y `redis` respectivamente en lugar de `127.0.0.1` para que puedan detectarse en la red interna de docker.
 - En `database`, debe modificarse la clave suffix por una que diga name
 - En `storage`, deben modifiarse todos los paths a que comiencen con `/data/` en lugar de `/var/www/peertube/storage/`
 
@@ -188,9 +188,9 @@ A partir de estos cambios estructurales, se deben hacer las configuraciones pert
 - En `admin`, configurar el email del usuario que luego será root en la instancia
 - En `redundancy`, descomentar la estrategia de redundancy entre servidores a utilizar,
 
-Como hacer todos estos cambios consume tiempo, se provee una version del archivo `production.placeholder.yaml` ya configurada pero con valores placeholder para los campos configurables. En el mismo se optó por la estrategia de redundancia de trending.
+Como hacer todos estos cambios consume tiempo, se provee una version del archivo [`production.placeholder.yaml`](production.placeholder.yaml) ya configurada pero con valores placeholder para los campos configurables. En el archivo ya provisto, se optó por utilizar todas las estategias de redundancia entre instancias posibles, pero esto se podría modificar a mano si deseara.
 
-Para completar el archivo production.yaml, se provee un archivo `.env` que solamente incluya la configuración a estos valores. Los elementos que deben estár presentes en este archivo `.env` son los siguientes:
+Para conseguir el archivo final `production.yaml`, se provee un archivo [`.env`](.env) que solamente incluya la configuración a estos valores. Los elementos a configurar este archivo son los siguientes:
 
 - POSTGRES_USER
   - Usuario de postgres
@@ -205,7 +205,7 @@ Para completar el archivo production.yaml, se provee un archivo `.env` que solam
 - PEERTUBE_SECRET
   - Secreto aleatorio creado con `openssl rand -hex 32`
 
-Luego de llenar el archivo `.env` se debe cargar esas variables de entorno en la consola y reemplazarlas en archivo de placeholder. Esto puede hacerse con el siguiente script si la shell utilizada es `bash` o `zsh`
+Luego de llenar el archivo se debe cargar esas variables de entorno en la consola y reemplazarlas en archivo de placeholder. Esto puede hacerse con el siguiente script si la shell utilizada es `bash` o `zsh`
 
 ```sh
 set -a
@@ -214,13 +214,19 @@ envsubst < production.placeholder.yaml > production.yaml
 set +a
 ```
 
+Si se quisiera hacer alguna modificación extra a la configuración de la instancia se puede hacer en la configuración del `production.yaml` creado
+
 ### Deploy
 
-Una vez realizada la configuración se puede proseguir con el deploy del servicio. El mismo puede ser realizado de manera local o en la nube. En caso de hacerlo local se deben realizar port forwarding a los puertos 80 y 443 del router hacia la pc que corra el servidor de forma que otros puedan conectarse. Si el servidor está corriendo algún tipo de firewall para estos puertos el mismo puede deshabilitarse. Esto puede hacerse con los comandos `firewall-cmd --add-port=443/tcp` y `firewall-cmd --add-port=80/tcp`. Si el contenedor se corre sin permisos de root (en el caso de que no se utilice docker, y se use podman por ejemplo) se debe permitir a los usuarios no root realizar bind a los puertos privilegiados con el comando `sysctl net.ipv4.ip_unprivileged_port_start=80`
+Una vez realizada la configuración se puede proseguir con el deploy del servicio. El mismo puede ser realizado de manera local o en la nube. En caso de hacerlo local se deben realizar `port forwarding` a los puertos 80 y 443 del router hacia la pc que corra el servidor de forma que otros puedan conectarse. Si el servidor está corriendo algún tipo de firewall para estos puertos el mismo debe deshabilitarse. Esto puede hacerse en linux con los comandos `firewall-cmd --add-port=443/tcp` y `firewall-cmd --add-port=80/tcp`. Si el contenedor se corre sin permisos de root (en el caso de que no se utilice docker, y se use podman por ejemplo) se debe permitir a los usuarios no root realizar `bind` a los puertos privilegiados con el comando `sysctl net.ipv4.ip_unprivileged_port_start=80` o correr configurar el contenedor para que corra como root.
 
 Para el deploy es necesario un dominio que apunte a la ip pública en donde va a estar corriendo el servidor. Puede conseguirse uno de forma gratuita en https://duckdns.org.
 
-Para deployear simplemente se debe correr `docker compose --env-file .env up -d`
+Como se mencionó antes, ya se provee el archivo [`docker-compose.yml`](docker-compose.yml) con los servicios necesarios. Por defecto, el mismo utiliza los valores del archivo [`.env`](.env) configurado para la creación de los servicios.
+
+De esta forma, para deployear simplemente se debe correr `docker compose up -d` y todos los recursos necesarios serán creados.
+
+En caso de utilizar `podman` en lugar de `docker` también se provee un archivo [`podman-compose.yml`](podman-compose.yml) con las modificaciónes necesarias para utilizar este runtime de contenedores. Se pueden deployear todos los recursos utilizando el comando `podman compose -f podman-compose.yml up -d
 
 Una vez peertube esté corriendo en los logs se puede observar la contraseña del usuario administrador o la misma se puede cambiar utilizando el comando `docker compose exec -u peertube peertube npm run reset-password -- -u root`
 
